@@ -5,4 +5,5 @@ authors = ["Danilo Pereira <dnp1@users.noreply.github.com>"]
 include = ["Cargo.toml", "src/**/*.rs"]
 
 [dependencies]
+request = {path = "../request"}
 iron = "^0.6"

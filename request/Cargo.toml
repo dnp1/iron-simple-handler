@@ -6,3 +6,4 @@ include = ["Cargo.toml", "src/**/*.rs"]
 
 [dependencies]
 iron = "^0.6"
+plugin = "0.2"
