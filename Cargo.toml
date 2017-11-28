@@ -2,4 +2,5 @@
 members = [
     "request",
     "handler",
+    "example",
 ]

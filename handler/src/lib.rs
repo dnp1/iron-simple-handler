@@ -12,43 +12,43 @@ use request::RequestBody;
 use request::RequestSession;
 use iron::status;
 
-
-pub trait SimpleHandler<R, Q, B, S>
-    where R: RequestRouteParams<R>,
-          Q: RequestQueryParams<Q>,
-          B: RequestBody<B>,
-          S: RequestSession<S>,
-{
-    fn authenticated(&self) -> bool {
-        false
-    }
-    fn handle(&self, req: &SimpleRequest<R, Q, B, S>) -> IronResult<Response>;
+pub trait SimpleDataManager<O>: Send + Sync + 'static {
+    fn get(&self, req: & mut Request) -> IronResult<O>;
+    fn set(&self, resp: Response, o: O) -> IronResult<Response>;
 }
 
-pub struct SimpleHandlerBox<T, R, Q, B, S>
-    where T: SimpleHandler<R, Q, B, S> + Send + Sync + 'static,
-          R: RequestRouteParams<R>,
-          Q: RequestQueryParams<Q>,
-          B: RequestBody<B>,
-          S: RequestSession<S>,
+pub trait SimpleHandler: Send + Sync + 'static
+{
+    fn handle<R, Q, B, S>(&self, req: &SimpleRequest<R, Q, B, S>) -> IronResult<Response>
+        where R: RequestRouteParams<R>,
+              Q: RequestQueryParams<Q>,
+              B: RequestBody<B>,
+              S: RequestSession<S>;
+}
+
+pub struct SimpleHandlerBox<T, M, O, R, Q, B, S>
+    where T: SimpleHandler,
+          M: SimpleDataManager<O>,
 {
     pub handler: T,
+    pub data_manager: M,
+    o: ::std::marker::PhantomData<O>,
     r: ::std::marker::PhantomData<R>,
     q: ::std::marker::PhantomData<Q>,
     b: ::std::marker::PhantomData<B>,
     s: ::std::marker::PhantomData<S>,
+
 }
 
-impl <T, R, Q, B, S> SimpleHandlerBox<T, R, Q, B, S>
-    where T: SimpleHandler<R, Q, B, S> + Send + Sync + 'static,
-          R: RequestRouteParams<R>,
-          Q: RequestQueryParams<Q>,
-          B: RequestBody<B>,
-          S: RequestSession<S>,
+impl<T, M, O, R, Q, B, S> SimpleHandlerBox<T, M, O, R, Q, B, S>
+    where T: SimpleHandler,
+          M: SimpleDataManager<O>,
 {
-    pub fn new(handler: T) -> Self {
+    pub fn new(handler: T, data_manager: M) -> Self {
         SimpleHandlerBox {
             handler,
+            data_manager,
+            o: ::std::marker::PhantomData,
             r: ::std::marker::PhantomData,
             q: ::std::marker::PhantomData,
             b: ::std::marker::PhantomData,
@@ -57,22 +57,32 @@ impl <T, R, Q, B, S> SimpleHandlerBox<T, R, Q, B, S>
     }
 }
 
-
-impl<T, R, Q, B, S> Handler for SimpleHandlerBox<T, R, Q, B, S>
-    where T: SimpleHandler<R, Q, B, S> + Send + Sync + 'static,
-          R: RequestRouteParams<R>,
-          Q: RequestQueryParams<Q>,
-          B: RequestBody<B>,
-          S: RequestSession<S>,
+impl<T, M, O, R, Q, B, S> Handler for SimpleHandlerBox<T, M, O, R, Q, B, S>
+    where T: SimpleHandler,
+          M: SimpleDataManager<O>,
+          O : 'static + Send + Sync,
+          R : RequestRouteParams<R>,
+          Q : RequestQueryParams<Q>,
+          B : RequestBody<B>,
+          S : RequestSession<S>,
 {
     fn handle(&self, req: &mut Request) -> IronResult<Response> {
-        let r: SimpleRequest<R, Q, B, S> = match SimpleRequest::from_request(req) {
-            Err(s) => {
-                return Ok(Response::with((status::BadRequest, "Could not parse body")))
-            },
+        let mut o = match self.data_manager.get(req) {
+            Err(err) => return Err(err),
+            Ok(value) => value,
+        };
+
+        let r: SimpleRequest<R, Q, B, S> = match SimpleRequest::from_request(&mut o) {
+            Err(err) => {
+                return Err(err);
+            }
             Ok(val) => val,
         };
-        self.handler.handle(&r)
+        let resp = match self.handler.handle(&r)  {
+            Err(e) => return Err(e),
+            Ok(data) => data,
+        };
+        return self.data_manager.set(resp, o);
     }
 }
 

@@ -1,24 +1,27 @@
 extern crate iron;
-use iron::Request;
 use iron::Response;
-use iron::IronResult;
 use iron::modifier::Modifier;
+use std::error::Error;
+use std::result::Result;
 
+
+
+type SimpleResult<T> = ::iron::IronResult<T>;
 
 pub trait RequestRouteParams<T>: Send + Sync + 'static {
-    fn from_request<'a>(req: &'a Request) -> IronResult<T>;
+    fn from_request<'a, O>(req: &'a O) -> SimpleResult<T> where O: Send + Sync + 'static;
 }
 
 pub trait RequestQueryParams<T>: Send + Sync + 'static {
-    fn from_request<'a>(req: &::iron::Request) -> IronResult<T>;
+    fn from_request<'a, O>(req: &'a O) -> SimpleResult<T> where O: Send + Sync + 'static;
 }
 
 pub trait RequestBody<T>: Send + Sync + 'static {
-    fn from_request<'a>(req: &'a mut::iron::Request) -> IronResult<T>;
+    fn from_request<'a, O>(req: &'a mut O) -> SimpleResult<T> where O: Send + Sync + 'static;
 }
 
 pub trait RequestSession<T> : Send + Sync + 'static {
-    fn from_request<'a>(req: &'a mut Request) -> IronResult<T>;
+    fn from_request<'a, O>(req: &'a O) -> SimpleResult<T> where O: Send + Sync + 'static;
 }
 
 
@@ -31,12 +34,13 @@ pub struct SimpleRequest<R, Q, B, S>
 }
 
 impl<R, Q, B, S> SimpleRequest<R, Q, B, S>
-    where R: RequestRouteParams<R>,
+    where
+          R: RequestRouteParams<R>,
           Q: RequestQueryParams<Q>,
           B: RequestBody<B>,
           S: RequestSession<S>,
 {
-    pub fn from_request<'a>(req: &'a mut Request) -> IronResult<Self> {
+    pub fn from_request<'a, O>(req: &'a mut O) -> SimpleResult<Self> where O: Send + Sync + 'static {
         let route_params = match R::from_request(req) {
             Err(e) => return Err(e),
             Ok(v) => v,
