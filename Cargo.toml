@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "request",
+    "handler",
+    "request-derive",
+]

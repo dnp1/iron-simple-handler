@@ -1,0 +1,8 @@
+[package]
+name = "request"
+version = "0.1.0"
+authors = ["Danilo Pereira <dnp1@users.noreply.github.com>"]
+include = ["Cargo.toml", "src/**/*.rs"]
+
+[dependencies]
+iron = "^0.6"
