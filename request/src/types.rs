@@ -1,3 +1,10 @@
+use ::RequestRouteParams;
+use ::RequestBody;
+use ::RequestQueryParams;
+use ::RequestSession;
+use ::SimpleResult;
+use iron::Request;
+
 #[derive(Debug)]
 pub enum ClientError {
     MissingRouteParam(String),
@@ -20,30 +27,30 @@ impl ::std::fmt::Display for ClientError {
 }
 
 
-#[derive(Clone, Deserialize)]
-pub struct Empty;
+//#[derive(Clone, Deserialize)]
+pub struct Ignore;
 
-impl FromRequest<Empty> for Empty {
-    fn from_request<'a>(_: &'a Request) -> IronResult<Empty> {
-        Ok(Empty)
+impl RequestSession<Ignore> for Ignore {
+    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Ignore> where O: Send + Sync + 'static {
+        return Ok(Ignore)
     }
 }
 
 
-impl FromRouteParams<Empty> for Empty  {
-    fn from_request<'a>(req: &'a Request) -> IronResult<T> {
-        Ok(Empty)
+impl RequestRouteParams<Ignore> for Ignore {
+    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Ignore> where O: Send + Sync + 'static {
+        return Ok(Ignore)
     }
 }
 
-impl FromBodyParser<Empty> for Empty {
-    fn from_request<'a>(_: &'a mut Request) -> IronResult<Empty> {
-        Ok(Empty)
+impl RequestBody<Ignore> for Ignore {
+    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Ignore> where O: Send + Sync + 'static {
+        return Ok(Ignore)
     }
 }
 
-impl FromQueryParams<Empty> for Empty {
-    fn from_request<'a>(_: &'a Request) -> IronResult<Empty> {
-        Ok(Empty)
+impl RequestQueryParams<Ignore> for Ignore {
+    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Ignore> where O: Send + Sync + 'static {
+        return Ok(Ignore)
     }
 }

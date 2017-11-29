@@ -1,27 +1,31 @@
 extern crate iron;
+
+pub mod types;
+
 use iron::Response;
+use iron::Request;
 use iron::modifier::Modifier;
 use std::error::Error;
 use std::result::Result;
 
 
 
-type SimpleResult<T> = ::iron::IronResult<T>;
+pub type SimpleResult<T> = ::iron::IronResult<T>;
 
 pub trait RequestRouteParams<T>: Send + Sync + 'static {
-    fn from_request<'a, O>(req: &'a O) -> SimpleResult<T> where O: Send + Sync + 'static;
+    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<T> where O: Send + Sync + 'static;
 }
 
 pub trait RequestQueryParams<T>: Send + Sync + 'static {
-    fn from_request<'a, O>(req: &'a O) -> SimpleResult<T> where O: Send + Sync + 'static;
+    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<T> where O: Send + Sync + 'static;
 }
 
 pub trait RequestBody<T>: Send + Sync + 'static {
-    fn from_request<'a, O>(req: &'a mut O) -> SimpleResult<T> where O: Send + Sync + 'static;
+    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<T> where O: Send + Sync + 'static;
 }
 
 pub trait RequestSession<T> : Send + Sync + 'static {
-    fn from_request<'a, O>(req: &'a O) -> SimpleResult<T> where O: Send + Sync + 'static;
+    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<T> where O: Send + Sync + 'static;
 }
 
 
@@ -40,23 +44,23 @@ impl<R, Q, B, S> SimpleRequest<R, Q, B, S>
           B: RequestBody<B>,
           S: RequestSession<S>,
 {
-    pub fn from_request<'a, O>(req: &'a mut O) -> SimpleResult<Self> where O: Send + Sync + 'static {
-        let route_params = match R::from_request(req) {
+    pub fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static {
+        let route_params = match R::from_request(req, services) {
             Err(e) => return Err(e),
             Ok(v) => v,
         };
 
-        let query_params = match Q::from_request(req) {
+        let query_params = match Q::from_request(req, services) {
             Err(e) => return Err(e),
             Ok(v) => v,
         };
 
-        let session = match S::from_request(req) {
+        let session = match S::from_request(req, services) {
             Err(e) => return Err(e),
             Ok(v) => v,
         };
 
-        let body = match B::from_request(req) {
+        let body = match B::from_request(req, services) {
             Err(e) => return Err(e),
             Ok(v) => v,
         };
