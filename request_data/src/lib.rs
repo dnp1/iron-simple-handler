@@ -7,7 +7,7 @@ extern crate quote;
 use proc_macro::TokenStream;
 use syn::{Ident, VariantData};
 
-#[proc_macro_derive(FromRouteParams)]
+#[proc_macro_derive(RequestRouteParams)]
 pub fn from_route_params(input: TokenStream) -> TokenStream {
     let source = input.to_string();
     // Parse the string representation into a syntax tree
@@ -52,9 +52,13 @@ pub fn from_route_params(input: TokenStream) -> TokenStream {
     let idents_1 = idents.clone();
 
     let tokens = quote! {
-        impl #impl_generics FromRouteParams<#name> for #name #ty_generics #where_clause {
-            fn from_params<'a>(params: &'a::router::Params) -> ::iron::IronResult<#name> {
+        impl #impl_generics RequestRouteParams<#name> for #name #ty_generics #where_clause {
+            fn from_params<'a, O>(req: &mut Request, _: &O) -> ::iron::IronResult<#name> {
                 // start with the default implementation
+                let params = match req.extensions.get::<Router>() {
+                    Err(err) => Err(err),
+                    Ok(val) => val,
+                };
                 #(
                     let key = #keys;
                     let #idents = match params.find(key) {

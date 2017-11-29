@@ -5,12 +5,57 @@ pub mod types;
 use iron::Response;
 use iron::Request;
 use iron::modifier::Modifier;
-use std::error::Error;
 use std::result::Result;
+use iron::status::Status;
+
+#[derive(Debug)]
+pub enum ClientError {
+    MissingRouteParam(String),
+    InvalidRouteParam(String),
+    InvalidBody(String),
+    MissingQueryParam(String),
+    InvalidQueryParam(String),
+    MissingSession(String),
+    InvalidSession(String),
+}
 
 
+impl ClientError {
+    fn status(&self) -> iron::status::Status {
+        iron::status::BadRequest
+    }
+}
 
-pub type SimpleResult<T> = ::iron::IronResult<T>;
+pub enum ServerError {
+    ExtensionNotFound(String),
+    PluginNotFound(String),
+    ServiceUnavailable(String),
+    Other(String),
+}
+
+impl ServerError {
+    fn status(&self) -> iron::status::Status {
+        iron::status::InternalServerError
+    }
+}
+
+
+pub enum SimpleError {
+    Server(ServerError),
+    Client(ClientError)
+}
+
+impl SimpleError {
+    fn status(&self) -> iron::status::Status {
+        match self {
+            &SimpleError::Server(ref e) => e.status(),
+            &SimpleError::Client(ref e) => e.status()
+        }
+    }
+}
+
+
+pub type SimpleResult<T> = Result<T, SimpleError>;
 
 pub trait RequestRouteParams<T>: Send + Sync + 'static {
     fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<T> where O: Send + Sync + 'static;
@@ -44,6 +89,7 @@ impl<R, Q, B, S> SimpleRequest<R, Q, B, S>
           B: RequestBody<B>,
           S: RequestSession<S>,
 {
+    #[inline]
     pub fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static {
         let route_params = match R::from_request(req, services) {
             Err(e) => return Err(e),
