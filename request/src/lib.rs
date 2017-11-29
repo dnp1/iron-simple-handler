@@ -8,6 +8,7 @@ use iron::modifier::Modifier;
 use std::result::Result;
 use iron::status::Status;
 
+
 #[derive(Debug)]
 pub enum ClientError {
     MissingRouteParam(String),
@@ -24,6 +25,17 @@ impl ClientError {
     fn status(&self) -> iron::status::Status {
         iron::status::BadRequest
     }
+    fn description(&self) -> &str {
+        match self {
+            &ClientError::MissingRouteParam(ref message) => message,
+            &ClientError::InvalidRouteParam(ref message) => message,
+            &ClientError::InvalidBody(ref message) => message,
+            &ClientError::MissingQueryParam(ref message) => message,
+            &ClientError::InvalidQueryParam(ref message) => message,
+            &ClientError::MissingSession(ref message) => message,
+            &ClientError::InvalidSession(ref message) => message,
+        }
+    }
 }
 
 pub enum ServerError {
@@ -37,6 +49,14 @@ impl ServerError {
     fn status(&self) -> iron::status::Status {
         iron::status::InternalServerError
     }
+    fn description(&self) -> &str {
+        match self {
+            &ServerError::ExtensionNotFound(ref message) => message,
+            &ServerError::PluginNotFound(ref message) => message,
+            &ServerError::ServiceUnavailable(ref message) => message,
+            &ServerError::Other(ref message) => message,
+        }
+    }
 }
 
 
@@ -46,10 +66,16 @@ pub enum SimpleError {
 }
 
 impl SimpleError {
-    fn status(&self) -> iron::status::Status {
+    pub fn status(&self) -> iron::status::Status {
         match self {
             &SimpleError::Server(ref e) => e.status(),
             &SimpleError::Client(ref e) => e.status()
+        }
+    }
+    pub fn description(&self) -> &str {
+        match self {
+            &SimpleError::Server(ref e) => e.description(),
+            &SimpleError::Client(ref e) => e.description()
         }
     }
 }
@@ -69,7 +95,7 @@ pub trait RequestBody<T>: Send + Sync + 'static {
     fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<T> where O: Send + Sync + 'static;
 }
 
-pub trait RequestSession<T> : Send + Sync + 'static {
+pub trait RequestSession<T>: Send + Sync + 'static {
     fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<T> where O: Send + Sync + 'static;
 }
 
@@ -84,10 +110,10 @@ pub struct SimpleRequest<R, Q, B, S>
 
 impl<R, Q, B, S> SimpleRequest<R, Q, B, S>
     where
-          R: RequestRouteParams<R>,
-          Q: RequestQueryParams<Q>,
-          B: RequestBody<B>,
-          S: RequestSession<S>,
+        R: RequestRouteParams<R>,
+        Q: RequestQueryParams<Q>,
+        B: RequestBody<B>,
+        S: RequestSession<S>,
 {
     #[inline]
     pub fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static {
