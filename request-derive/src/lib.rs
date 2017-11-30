@@ -1,4 +1,4 @@
-#![recursion_limit = "128"]
+#![recursion_limit = "256"]
 extern crate proc_macro;
 extern crate syn;
 #[macro_use]
@@ -52,8 +52,9 @@ pub fn from_route_params(input: TokenStream) -> TokenStream {
     let idents_1 = idents.clone();
 
     let tokens = quote! {
-        impl #impl_generics RequestRouteParams<#name> for #name #ty_generics #where_clause {
-            fn from_params<'a, O>(req: &mut Request, _: &O) -> ::iron::IronResult<#name> {
+        impl #impl_generics RequestRouteParams<#name, O> for #name #ty_generics #where_clause {
+            fn from_request<'a>(req: &mut Request, _: &O) -> ::request::SimpleResult<#name> {
+                use ::std::str::FromStr;
                 // start with the default implementation
                 let params = match req.extensions.get::<Router>() {
                     Err(err) => Err(err),
@@ -88,7 +89,7 @@ pub fn from_route_params(input: TokenStream) -> TokenStream {
     tokens.parse().unwrap()
 }
 
-#[proc_macro_derive(FromBodyParser)]
+#[proc_macro_derive(RequestBody)]
 pub fn from_bodyparser(input: TokenStream) -> TokenStream {
     let source = input.to_string();
     // Parse the string representation into a syntax tree
@@ -98,19 +99,19 @@ pub fn from_bodyparser(input: TokenStream) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
     let tokens = quote! {
-        impl #impl_generics FromBodyParser<#name> for #name #ty_generics #where_clause {
-            fn from_request<'a>(req: &'a mut ::iron::Request) -> ::iron::IronResult<#name> {
+        impl #impl_generics RequestBody<#name> for #name #ty_generics #where_clause {
+             fn from_request<'a, O>(req: &mut Request, _: &O) -> ::request::SimpleResult<#name> {
                 use ::iron::Plugin;
+
+                use ::request::SimpleError;
+                use ::request::ClientError;
+
                 // start with the default implementation
                  match req.get::<bodyparser::Struct<#name>>() {
-                    Err(err) => Err(::iron::error::IronError::new(
-                                err,
-                                ::iron::status::BadRequest
-                            )),
-                    Ok(None) => Err(::iron::error::IronError::new(
-                                ::util::ClientError::MissingRouteParam("missing body".to_owned()),
-                                ::iron::status::BadRequest
-                            )),
+                    Err(err) => Err(SimpleError::Client(err.description().to_owned())),
+                    Ok(None) => Err(SimpleError::Client(
+                        ClientError::UnexpectedEmptyBody("unexpected empty body".to_owned())
+                    )),
                     Ok(Some(val)) => Ok(val.to_owned()),
 
                  }

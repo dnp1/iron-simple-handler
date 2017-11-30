@@ -10,77 +10,70 @@ use request::RequestRouteParams;
 use request::RequestQueryParams;
 use request::RequestBody;
 use request::RequestSession;
+use request::SimpleResult;
+
+pub trait FromIronRequest: std::marker::Sized {
+    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static;
+}
+
+impl<R, Q, B, S> FromIronRequest for SimpleRequest<R, Q, B, S>
+    where
+        R: RequestRouteParams,
+        Q: RequestQueryParams,
+        B: RequestBody,
+        S: RequestSession,
+{
+    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static {
+        Self::from_request(req, services)
+    }
+}
+
 
 pub trait SimpleErrorTransformer: Send + Sync + 'static {
     fn transform(&self, err: request::SimpleError) -> IronResult<Response>;
 }
 
-pub trait SimpleHandler<R, Q, B, S>: Send + Sync + 'static
-    where R: RequestRouteParams<R>,
-          Q: RequestQueryParams<Q>,
-          B: RequestBody<B>,
-          S: RequestSession<S>
+pub trait SimpleHandler: Send + Sync + 'static
 {
-    fn handle(&self, req: &SimpleRequest<R, Q, B, S>) -> IronResult<Response>;
+    type Request: FromIronRequest;
 
-    fn handler<O: Send + Sync + 'static, E: SimpleErrorTransformer>(self, services: O, error_transformer: E) -> SimpleHandlerBox<Self, O, R, Q, B, S, E> where Self: std::marker::Sized {
+    fn handle(&self, req: &Self::Request) -> IronResult<Response>;
+
+    fn handler<O: Send + Sync + 'static, E: SimpleErrorTransformer>(self, services: O, error_transformer: E) -> SimpleHandlerBox<Self, O, E> where Self: std::marker::Sized {
         SimpleHandlerBox::new(self, services, error_transformer)
     }
 }
 
-pub struct SimpleHandlerBox<T, O, R, Q, B, S, E>
-    where T: SimpleHandler<R, Q, B, S>,
-          R: RequestRouteParams<R>,
-          Q: RequestQueryParams<Q>,
-          B: RequestBody<B>,
-          S: RequestSession<S>,
+pub struct SimpleHandlerBox<T, O, E>
+    where T: SimpleHandler,
           E: SimpleErrorTransformer,
 {
     pub handler: T,
     pub services: O,
     pub error_transformer: E,
-    o: ::std::marker::PhantomData<O>,
-    r: ::std::marker::PhantomData<R>,
-    q: ::std::marker::PhantomData<Q>,
-    b: ::std::marker::PhantomData<B>,
-    s: ::std::marker::PhantomData<S>,
-
 }
 
-impl<T, O, R, Q, B, S, E> SimpleHandlerBox<T, O, R, Q, B, S, E>
-    where T: SimpleHandler<R, Q, B, S>,
-          R: RequestRouteParams<R>,
-          Q: RequestQueryParams<Q>,
-          B: RequestBody<B>,
-          S: RequestSession<S>,
+impl<T, O, E> SimpleHandlerBox<T, O, E>
+    where T: SimpleHandler,
           E: SimpleErrorTransformer,
 {
     pub fn new(handler: T, services: O, error_transformer: E) -> Self {
         SimpleHandlerBox {
             handler,
             services,
-            error_transformer,
-            o: ::std::marker::PhantomData,
-            r: ::std::marker::PhantomData,
-            q: ::std::marker::PhantomData,
-            b: ::std::marker::PhantomData,
-            s: ::std::marker::PhantomData,
+            error_transformer
         }
     }
 }
 
-impl<T, O, R, Q, B, S, E> Handler for SimpleHandlerBox<T, O, R, Q, B, S, E>
-    where T: SimpleHandler<R, Q, B, S>,
+impl<T, O, E> Handler for SimpleHandlerBox<T, O, E>
+    where T: SimpleHandler,
           O: 'static + Send + Sync,
-          R: RequestRouteParams<R>,
-          Q: RequestQueryParams<Q>,
-          B: RequestBody<B>,
-          S: RequestSession<S>,
           E: SimpleErrorTransformer,
 {
     #[inline]
     fn handle(&self, req: &mut Request) -> IronResult<Response> {
-        let r: SimpleRequest<R, Q, B, S> = match SimpleRequest::from_request(req, &self.services) {
+        let r: T::Request = match T::Request::from_request(req, &self.services) {
             Err(err) => {
                 return self.error_transformer.transform(err);
             }

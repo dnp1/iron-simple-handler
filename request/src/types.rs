@@ -9,7 +9,7 @@ use iron::Request;
 //#[derive(Clone, Deserialize)]
 pub struct Ignore;
 
-impl RequestSession<Ignore> for Ignore {
+impl RequestSession for Ignore {
     #[inline]
     fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Ignore> where O: Send + Sync + 'static {
         return Ok(Ignore)
@@ -17,21 +17,21 @@ impl RequestSession<Ignore> for Ignore {
 }
 
 
-impl RequestRouteParams<Ignore> for Ignore {
+impl RequestRouteParams for Ignore {
     #[inline]
     fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Ignore> where O: Send + Sync + 'static {
         return Ok(Ignore)
     }
 }
 
-impl RequestBody<Ignore> for Ignore {
+impl RequestBody for Ignore {
     #[inline]
     fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Ignore> where O: Send + Sync + 'static {
         return Ok(Ignore)
     }
 }
 
-impl RequestQueryParams<Ignore> for Ignore {
+impl RequestQueryParams for Ignore {
     #[inline]
     fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Ignore> where O: Send + Sync + 'static {
         return Ok(Ignore)

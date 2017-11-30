@@ -14,6 +14,7 @@ pub enum ClientError {
     MissingRouteParam(String),
     InvalidRouteParam(String),
     InvalidBody(String),
+    UnexpectedEmptyBody(String),
     MissingQueryParam(String),
     InvalidQueryParam(String),
     MissingSession(String),
@@ -29,6 +30,7 @@ impl ClientError {
         match self {
             &ClientError::MissingRouteParam(ref message) => message,
             &ClientError::InvalidRouteParam(ref message) => message,
+            &ClientError::UnexpectedEmptyBody(ref message) => message,
             &ClientError::InvalidBody(ref message) => message,
             &ClientError::MissingQueryParam(ref message) => message,
             &ClientError::InvalidQueryParam(ref message) => message,
@@ -83,20 +85,20 @@ impl SimpleError {
 
 pub type SimpleResult<T> = Result<T, SimpleError>;
 
-pub trait RequestRouteParams<T>: Send + Sync + 'static {
-    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<T> where O: Send + Sync + 'static;
+pub trait RequestRouteParams: Send + Sync + 'static + std::marker::Sized {
+    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static;
 }
 
-pub trait RequestQueryParams<T>: Send + Sync + 'static {
-    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<T> where O: Send + Sync + 'static;
+pub trait RequestQueryParams: Send + Sync + 'static + std::marker::Sized {
+    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static;
 }
 
-pub trait RequestBody<T>: Send + Sync + 'static {
-    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<T> where O: Send + Sync + 'static;
+pub trait RequestBody: Send + Sync + 'static + std::marker::Sized {
+    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static;
 }
 
-pub trait RequestSession<T>: Send + Sync + 'static {
-    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<T> where O: Send + Sync + 'static;
+pub trait RequestSession: Send + Sync + 'static + std::marker::Sized {
+    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static;
 }
 
 
@@ -110,10 +112,10 @@ pub struct SimpleRequest<R, Q, B, S>
 
 impl<R, Q, B, S> SimpleRequest<R, Q, B, S>
     where
-        R: RequestRouteParams<R>,
-        Q: RequestQueryParams<Q>,
-        B: RequestBody<B>,
-        S: RequestSession<S>,
+        R: RequestRouteParams,
+        Q: RequestQueryParams,
+        B: RequestBody,
+        S: RequestSession,
 {
     #[inline]
     pub fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static {
