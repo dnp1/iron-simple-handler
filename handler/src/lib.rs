@@ -90,8 +90,35 @@ impl<T, O, E> Handler for SimpleHandlerBox<T, O, E>
 
 #[cfg(test)]
 mod tests {
+
+    use iron::prelude::{Response, IronResult};
+
+    pub struct MyHand;
+
+    use request::types::Ignore;
+    use SimpleHandler;
+    use SimpleErrorTransformer;
+    use request;
+
+    impl SimpleHandler  for MyHand {
+
+        type Request = ::request::SimpleRequest<Ignore, Ignore, Ignore, Ignore>;
+
+        fn handle(&self, req: &Self::Request) -> IronResult<Response> {
+            unimplemented!()
+        }
+    }
+
+    struct NoTransform;
+
+    impl SimpleErrorTransformer for NoTransform {
+        fn transform(&self, err: request::SimpleError) -> IronResult<Response> {
+            unimplemented!()
+        }
+    }
+
     #[test]
     fn it_works() {
-        assert_eq!(2 + 2, 4);
+        MyHand.handler((), NoTransform);
     }
 }
