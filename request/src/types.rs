@@ -10,30 +10,34 @@ use iron::Request;
 pub struct Ignore;
 
 impl RequestSession for Ignore {
+    type Services = ();
     #[inline]
-    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Ignore> where O: Send + Sync + 'static {
+    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Ignore> {
         return Ok(Ignore)
     }
 }
 
 
 impl RequestRouteParams for Ignore {
+    type Services = ();
     #[inline]
-    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Ignore> where O: Send + Sync + 'static {
+    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Ignore> {
         return Ok(Ignore)
     }
 }
 
 impl RequestBody for Ignore {
+    type Services = ();
     #[inline]
-    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Ignore> where O: Send + Sync + 'static {
+    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Ignore> {
         return Ok(Ignore)
     }
 }
 
 impl RequestQueryParams for Ignore {
+    type Services = ();
     #[inline]
-    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Ignore> where O: Send + Sync + 'static {
+    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Ignore> {
         return Ok(Ignore)
     }
 }

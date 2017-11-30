@@ -86,19 +86,23 @@ impl SimpleError {
 pub type SimpleResult<T> = Result<T, SimpleError>;
 
 pub trait RequestRouteParams: Send + Sync + 'static + std::marker::Sized {
-    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static;
+    type Services : Send + Sync + 'static;
+    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Self>;
 }
 
 pub trait RequestQueryParams: Send + Sync + 'static + std::marker::Sized {
-    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static;
+    type Services : Send + Sync + 'static;
+    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Self>;
 }
 
 pub trait RequestBody: Send + Sync + 'static + std::marker::Sized {
-    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static;
+    type Services : Send + Sync + 'static;
+    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Self>;
 }
 
 pub trait RequestSession: Send + Sync + 'static + std::marker::Sized {
-    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static;
+    type Services : Send + Sync + 'static;
+    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Self>;
 }
 
 
@@ -110,15 +114,18 @@ pub struct SimpleRequest<R, Q, B, S>
     pub session: S,
 }
 
-impl<R, Q, B, S> SimpleRequest<R, Q, B, S>
+impl<R, Q, B, S, O> SimpleRequest<R, Q, B, S>
     where
-        R: RequestRouteParams,
-        Q: RequestQueryParams,
-        B: RequestBody,
-        S: RequestSession,
+        O: Send + Sync + 'static,
+        R: RequestRouteParams<Services = O>,
+        Q: RequestQueryParams<Services = R::Services>,
+        B: RequestBody<Services = R::Services>,
+        S: RequestSession<Services = R::Services>,
+
 {
     #[inline]
-    pub fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static {
+    pub fn from_request<'a>(req: &mut Request, services: &O) -> SimpleResult<Self>
+    {
         let route_params = match R::from_request(req, services) {
             Err(e) => return Err(e),
             Ok(v) => v,
