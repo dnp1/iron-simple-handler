@@ -12,19 +12,23 @@ use request::RequestBody;
 use request::RequestSession;
 use request::SimpleResult;
 
-pub trait FromIronRequest: std::marker::Sized {
-    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static;
+
+pub trait FromIronRequest<O>: std::marker::Sized
+    where O: Send + Sync + 'static
+{
+    fn from_request<'a>(req: &mut Request, services: &O) -> SimpleResult<Self>;
 }
 
-impl<R, Q, B, S> FromIronRequest for SimpleRequest<R, Q, B, S>
+impl<R, Q, B, S, O> FromIronRequest<O> for SimpleRequest<R, Q, B, S>
     where
-        R: RequestRouteParams,
-        Q: RequestQueryParams,
-        B: RequestBody,
-        S: RequestSession,
+        O: Send + Sync + 'static,
+        R: RequestRouteParams<Services=O>,
+        Q: RequestQueryParams<Services=R::Services>,
+        B: RequestBody<Services=R::Services>,
+        S: RequestSession<Services=R::Services>,
 {
-    fn from_request<'a, O>(req: &mut Request, services: &O) -> SimpleResult<Self> where O: Send + Sync + 'static {
-        Self::from_request(req, services)
+    fn from_request<'a>(req: &mut Request, services: &O) -> SimpleResult<Self> {
+        SimpleRequest::from_request(req, services)
     }
 }
 
@@ -35,11 +39,13 @@ pub trait SimpleErrorTransformer: Send + Sync + 'static {
 
 pub trait SimpleHandler: Send + Sync + 'static
 {
-    type Request: FromIronRequest;
+    type Services: Send + Sync + 'static;
+    type Request: FromIronRequest<Self::Services>;
 
-    fn handle(&self, req: &Self::Request) -> IronResult<Response>;
+    fn handle(&self, req: &Self::Request, services: &Self::Services) -> IronResult<Response>;
 
-    fn handler<O: Send + Sync + 'static, E: SimpleErrorTransformer>(self, services: O, error_transformer: E) -> SimpleHandlerBox<Self, O, E> where Self: std::marker::Sized {
+    #[inline]
+    fn handler<E: SimpleErrorTransformer>(self, services: Self::Services, error_transformer: E) -> SimpleHandlerBox<Self, Self::Services, E> where Self: std::marker::Sized {
         SimpleHandlerBox::new(self, services, error_transformer)
     }
 }
@@ -66,8 +72,9 @@ impl<T, O, E> SimpleHandlerBox<T, O, E>
     }
 }
 
-impl<T, O, E> Handler for SimpleHandlerBox<T, O, E>
-    where T: SimpleHandler,
+impl<T, O, E, R> Handler for SimpleHandlerBox<T, O, E>
+    where T: SimpleHandler<Request=R, Services=O>,
+          R: FromIronRequest<O>,
           O: 'static + Send + Sync,
           E: SimpleErrorTransformer,
 {
@@ -79,7 +86,7 @@ impl<T, O, E> Handler for SimpleHandlerBox<T, O, E>
             }
             Ok(val) => val,
         };
-        let resp = match self.handler.handle(&r) {
+        let resp = match self.handler.handle(&r, &self.services) {
             Err(e) => return Err(e),
             Ok(data) => data,
         };
@@ -90,7 +97,6 @@ impl<T, O, E> Handler for SimpleHandlerBox<T, O, E>
 
 #[cfg(test)]
 mod tests {
-
     use iron::prelude::{Response, IronResult};
 
     pub struct MyHand;
@@ -100,11 +106,11 @@ mod tests {
     use SimpleErrorTransformer;
     use request;
 
-    impl SimpleHandler  for MyHand {
-
+    impl SimpleHandler for MyHand {
         type Request = ::request::SimpleRequest<Ignore, Ignore, Ignore, Ignore>;
+        type Services = ();
 
-        fn handle(&self, req: &Self::Request) -> IronResult<Response> {
+        fn handle(&self, _req: &Self::Request, _services: &Self::Services) -> IronResult<Response> {
             unimplemented!()
         }
     }
@@ -112,7 +118,7 @@ mod tests {
     struct NoTransform;
 
     impl SimpleErrorTransformer for NoTransform {
-        fn transform(&self, err: request::SimpleError) -> IronResult<Response> {
+        fn transform(&self, _err: request::SimpleError) -> IronResult<Response> {
             unimplemented!()
         }
     }
