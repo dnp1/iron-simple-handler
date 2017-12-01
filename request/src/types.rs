@@ -7,37 +7,38 @@ use iron::Request;
 
 
 //#[derive(Clone, Deserialize)]
-pub struct Ignore;
 
-impl RequestSession for Ignore {
-    type Services = ();
+pub struct Ignore<O>(::std::marker::PhantomData<O>);
+
+impl <O: Send + Sync + 'static> RequestSession for Ignore<O> {
+    type Services = O;
     #[inline]
-    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Ignore> {
-        return Ok(Ignore)
+    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Ignore<O>> {
+        return Ok(Ignore(::std::marker::PhantomData))
     }
 }
 
 
-impl RequestRouteParams for Ignore {
-    type Services = ();
+impl <O: Send + Sync + 'static>RequestRouteParams for Ignore<O> {
+    type Services = O;
     #[inline]
-    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Ignore> {
-        return Ok(Ignore)
+    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Ignore<O>> {
+        return Ok(Ignore(::std::marker::PhantomData))
     }
 }
 
-impl RequestBody for Ignore {
-    type Services = ();
+impl <O: Send + Sync + 'static> RequestBody for Ignore<O> {
+    type Services = O;
     #[inline]
-    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Ignore> {
-        return Ok(Ignore)
+    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Ignore<O>> {
+        return Ok(Ignore(::std::marker::PhantomData))
     }
 }
 
-impl RequestQueryParams for Ignore {
-    type Services = ();
+impl <O: Send + Sync + 'static>RequestQueryParams for Ignore<O> {
+    type Services = O;
     #[inline]
-    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Ignore> {
-        return Ok(Ignore)
+    fn from_request<'a>(req: &mut Request, services: &Self::Services) -> SimpleResult<Ignore<O>> {
+        return Ok(Ignore(::std::marker::PhantomData))
     }
 }

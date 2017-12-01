@@ -101,10 +101,11 @@ mod tests {
 
     pub struct MyHand;
 
-    use request::types::Ignore;
     use SimpleHandler;
     use SimpleErrorTransformer;
     use request;
+
+    type Ignore = ::request::types::Ignore<()>;
 
     impl SimpleHandler for MyHand {
         type Request = ::request::SimpleRequest<Ignore, Ignore, Ignore, Ignore>;
