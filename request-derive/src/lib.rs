@@ -52,8 +52,10 @@ pub fn from_route_params(input: TokenStream) -> TokenStream {
     let idents_1 = idents.clone();
 
     let tokens = quote! {
-        impl #impl_generics RequestRouteParams<#name, O> for #name #ty_generics #where_clause {
-            fn from_request<'a>(req: &mut Request, _: &O) -> ::request::SimpleResult<#name> {
+        impl #impl_generics RequestRouteParams for #name #ty_generics #where_clause {
+            type Services = Services;
+
+            fn from_request<'a>(req: &mut Request, _: &Self::Services) -> ::request::SimpleResult<#name> {
                 use ::std::str::FromStr;
                 // start with the default implementation
                 let params = match req.extensions.get::<Router>() {
@@ -99,16 +101,21 @@ pub fn from_bodyparser(input: TokenStream) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
     let tokens = quote! {
-        impl #impl_generics RequestBody<#name> for #name #ty_generics #where_clause {
-             fn from_request<'a, O>(req: &mut Request, _: &O) -> ::request::SimpleResult<#name> {
+        impl #impl_generics RequestBody for #name #ty_generics #where_clause {
+             type Services = Services;
+
+             fn from_request<'a>(req: &mut Request, _: &Self::Services) -> ::request::SimpleResult<#name> {
                 use ::iron::Plugin;
 
                 use ::request::SimpleError;
                 use ::request::ClientError;
 
+
                 // start with the default implementation
                  match req.get::<bodyparser::Struct<#name>>() {
-                    Err(err) => Err(SimpleError::Client(err.description().to_owned())),
+                    Err(err) => Err(SimpleError::Client(
+                        ClientError::InvalidBody(err.description().to_owned()))
+                    ),
                     Ok(None) => Err(SimpleError::Client(
                         ClientError::UnexpectedEmptyBody("unexpected empty body".to_owned())
                     )),
