@@ -57,23 +57,29 @@ pub fn from_route_params(input: TokenStream) -> TokenStream {
 
             fn from_request<'a>(req: &mut Request, _: &Self::Services) -> ::request::SimpleResult<#name> {
                 use ::std::str::FromStr;
+                use ::request::SimpleError;
+                use ::request::ClientError;
+                use ::request::ServerError;
+                use ::router::Router;
                 // start with the default implementation
                 let params = match req.extensions.get::<Router>() {
-                    Err(err) => Err(err),
-                    Ok(val) => val,
+                    None => return Err(SimpleError::Server(
+                                ServerError::ExtensionNotFound("Missing router extension".to_owned())
+                            )),
+                    Some(val) => val,
                 };
                 #(
                     let key = #keys;
                     let #idents = match params.find(key) {
-                        None => return Err(::iron::error::IronError::new(
-                            ::util::ClientError::MissingRouteParam(key.to_owned()),
-                            ::iron::status::BadRequest)
+                        None => return Err(
+                            SimpleError::Client(
+                                ClientError::MissingRouteParam("".to_owned())
+                            )
                         ),
                         Some(val) => match #tys::from_str(val) {
-                            Err(err) => return Err(::iron::error::IronError::new(
-                                err,
-                                ::iron::status::BadRequest
-                            )),
+                            Err(err) => return Err(SimpleError::Client(
+                                ClientError::InvalidRouteParam(err.description().to_owned()))
+                            ),
                             Ok(val) => val,
                         },
                     };
