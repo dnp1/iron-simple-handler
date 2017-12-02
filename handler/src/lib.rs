@@ -5,32 +5,12 @@ use iron::Request;
 use iron::Response;
 use iron::IronResult;
 use iron::Handler;
-use request::SimpleRequest;
+use request::FromIronRequest;
 use request::RequestRouteParams;
 use request::RequestQueryParams;
 use request::RequestBody;
 use request::RequestSession;
 use request::SimpleResult;
-
-
-pub trait FromIronRequest<O>: std::marker::Sized
-    where O: Send + Sync + 'static
-{
-    fn from_request<'a>(req: &mut Request, services: &O) -> SimpleResult<Self>;
-}
-
-impl<R, Q, B, S, O> FromIronRequest<O> for SimpleRequest<R, Q, B, S>
-    where
-        O: Send + Sync + 'static,
-        R: RequestRouteParams<Services=O>,
-        Q: RequestQueryParams<Services=R::Services>,
-        B: RequestBody<Services=R::Services>,
-        S: RequestSession<Services=R::Services>,
-{
-    fn from_request<'a>(req: &mut Request, services: &O) -> SimpleResult<Self> {
-        SimpleRequest::from_request(req, services)
-    }
-}
 
 
 pub trait SimpleErrorTransformer: Send + Sync + 'static {
@@ -105,10 +85,9 @@ mod tests {
     use SimpleErrorTransformer;
     use request;
 
-    type Ignore = ::request::types::Ignore<()>;
 
     impl SimpleHandler for MyHand {
-        type Request = ::request::SimpleRequest<Ignore, Ignore, Ignore, Ignore>;
+        type Request = ();
         type Services = ();
 
         fn handle(&self, _req: &Self::Request, _services: &Self::Services) -> IronResult<Response> {
