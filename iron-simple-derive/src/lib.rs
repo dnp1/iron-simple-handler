@@ -52,14 +52,12 @@ pub fn from_route_params(input: TokenStream) -> TokenStream {
     let idents_1 = idents.clone();
 
     let tokens = quote! {
-        impl #impl_generics RequestRouteParams for #name #ty_generics #where_clause {
-            type Services = Services;
-
-            fn from_request<'a>(req: &mut Request, _: &Self::Services) -> ::request::SimpleResult<#name> {
+        impl #impl_generics ::iron_simple::FromIronRequest<Services> for #name #ty_generics #where_clause {
+            fn from_request<'a>(req: &mut ::iron::Request, _: &Services) -> ::iron_simple::SimpleResult<#name> {
                 use ::std::str::FromStr;
-                use ::request::SimpleError;
-                use ::request::ClientError;
-                use ::request::ServerError;
+                use ::iron_simple::SimpleError;
+                use ::iron_simple::ClientError;
+                use ::iron_simple::ServerError;
                 use ::router::Router;
                 // start with the default implementation
                 let params = match req.extensions.get::<Router>() {
@@ -107,14 +105,14 @@ pub fn from_bodyparser(input: TokenStream) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
     let tokens = quote! {
-        impl #impl_generics RequestBody for #name #ty_generics #where_clause {
-             type Services = Services;
+        impl #impl_generics ::iron_simple::FromIronRequest<Services> for #name #ty_generics #where_clause {
 
-             fn from_request<'a>(req: &mut Request, _: &Self::Services) -> ::request::SimpleResult<#name> {
+             fn from_request<'a>(req: &mut ::iron::Request, _: &Services) -> ::iron_simple::SimpleResult<#name> {
                 use ::iron::Plugin;
+                use bodyparser;
 
-                use ::request::SimpleError;
-                use ::request::ClientError;
+                use ::iron_simple::SimpleError;
+                use ::iron_simple::ClientError;
 
 
                 // start with the default implementation

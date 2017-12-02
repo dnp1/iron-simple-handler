@@ -1,5 +1,5 @@
 [package]
-name = "request-derive"
+name = "iron-simple-derive"
 version = "0.1.0"
 authors = ["Danilo Pereira <dnp1@users.noreply.github.com>"]
 include = ["Cargo.toml", "src/**/*.rs"]

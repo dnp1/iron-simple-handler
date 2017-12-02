@@ -1,31 +1,21 @@
-extern crate iron;
-extern crate request;
-
 use iron::Request;
 use iron::Response;
 use iron::IronResult;
 use iron::Handler;
-use request::FromIronRequest;
-use request::RequestRouteParams;
-use request::RequestQueryParams;
-use request::RequestBody;
-use request::RequestSession;
-use request::SimpleResult;
 
-
-pub trait SimpleErrorTransformer: Send + Sync + 'static {
-    fn transform(&self, err: request::SimpleError) -> IronResult<Response>;
-}
+use super::FromIronRequest;
+use super::SimpleErrorTransformer;
 
 pub trait SimpleHandler: Send + Sync + 'static
 {
     type Services: Send + Sync + 'static;
     type Request: FromIronRequest<Self::Services>;
 
-    fn handle(&self, req: &Self::Request, services: &Self::Services) -> IronResult<Response>;
+    fn handle(&self, req: Self::Request, services: &Self::Services) -> IronResult<Response>;
 
     #[inline]
-    fn handler<E: SimpleErrorTransformer>(self, services: Self::Services, error_transformer: E) -> SimpleHandlerBox<Self, Self::Services, E> where Self: std::marker::Sized {
+    fn handler<E: SimpleErrorTransformer>(self, services: Self::Services, error_transformer: E) -> SimpleHandlerBox<Self, Self::Services, E>
+        where Self: ::std::marker::Sized {
         SimpleHandlerBox::new(self, services, error_transformer)
     }
 }
@@ -66,14 +56,13 @@ impl<T, O, E, R> Handler for SimpleHandlerBox<T, O, E>
             }
             Ok(val) => val,
         };
-        let resp = match self.handler.handle(&r, &self.services) {
+        let resp = match self.handler.handle(r, &self.services) {
             Err(e) => return Err(e),
             Ok(data) => data,
         };
         return Ok(resp);
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -82,15 +71,14 @@ mod tests {
     pub struct MyHand;
 
     use SimpleHandler;
-    use SimpleErrorTransformer;
-    use request;
+    use super::SimpleErrorTransformer;
 
 
     impl SimpleHandler for MyHand {
         type Request = ();
         type Services = ();
 
-        fn handle(&self, _req: &Self::Request, _services: &Self::Services) -> IronResult<Response> {
+        fn handle(&self, _req: Self::Request, _services: &Self::Services) -> IronResult<Response> {
             unimplemented!()
         }
     }
@@ -98,7 +86,7 @@ mod tests {
     struct NoTransform;
 
     impl SimpleErrorTransformer for NoTransform {
-        fn transform(&self, _err: request::SimpleError) -> IronResult<Response> {
+        fn transform(&self, _err: SimpleError) -> IronResult<Response> {
             unimplemented!()
         }
     }

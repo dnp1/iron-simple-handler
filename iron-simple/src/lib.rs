@@ -1,19 +1,22 @@
 extern crate iron;
 
 mod error;
+mod handler;
 
 pub use error::*;
+pub use handler::*;
 
 use iron::Request;
+use iron::Response;
+use iron::IronResult;
 use std::result::Result;
 
 
 pub type SimpleResult<T> = Result<T, SimpleError>;
 
-pub type RequestRouteParams<O> = FromIronRequest<O>;
-pub type RequestQueryParams<O> = FromIronRequest<O>;
-pub type RequestBody<O> = FromIronRequest<O>;
-pub type RequestSession<O> = FromIronRequest<O>;
+pub trait SimpleErrorTransformer: Send + Sync + 'static {
+    fn transform(&self, err: SimpleError) -> IronResult<Response>;
+}
 
 pub trait FromIronRequest<O>: std::marker::Sized
     where O: Send + Sync + 'static
@@ -25,7 +28,7 @@ pub trait FromIronRequest<O>: std::marker::Sized
 impl<O> FromIronRequest<O> for () where
     O: Send + Sync + 'static,
 {
-    fn from_request<'a>(req: &mut Request, services: &O) -> SimpleResult<Self> {
+    fn from_request<'a>(_: &mut Request, _: &O) -> SimpleResult<Self> {
         Ok(())
     }
 }

@@ -1,5 +1,4 @@
 use iron;
-use iron::status::Status;
 
 #[derive(Debug)]
 pub enum ClientError {

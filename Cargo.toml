@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "request",
-    "handler",
-    "request-derive",
+    "iron-simple",
+    "iron-simple-derive",
 ]
