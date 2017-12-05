@@ -55,6 +55,7 @@ pub fn from_route_params(input: TokenStream) -> TokenStream {
         impl #impl_generics ::iron_simple::FromIronRequest<Services> for #name #ty_generics #where_clause {
             fn from_request<'a>(req: &mut ::iron::Request, _: &Services) -> ::iron_simple::SimpleResult<#name> {
                 use ::std::str::FromStr;
+                use std::error::Error;
                 use ::iron_simple::SimpleError;
                 use ::iron_simple::ClientError;
                 use ::iron_simple::ServerError;
@@ -110,6 +111,7 @@ pub fn from_bodyparser(input: TokenStream) -> TokenStream {
              fn from_request<'a>(req: &mut ::iron::Request, _: &Services) -> ::iron_simple::SimpleResult<#name> {
                 use ::iron::Plugin;
                 use bodyparser;
+                use std::error::Error;
 
                 use ::iron_simple::SimpleError;
                 use ::iron_simple::ClientError;
